@@ -1,0 +1,3 @@
+# Input / Output absolute paths, no trailing slash "/"
+input:  "/full/path/to/fastqs"
+output: "/full/path/to/output"

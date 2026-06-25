@@ -1,0 +1,11 @@
+##gff-version 3
+#!gff-spec-version 1.21
+# Derived from NCBI/DDBJ annotation of LC259094.1 (CHIKV/Hu/Angola/NIID54/2016).
+# Coordinates lifted onto the primer-scheme reference hChikV_Angola_NIID_NIID54_2016
+# (= LC259094.1[77..11313], 5'UTR/3'UTR trimmed; constant offset delta = 76, no indels).
+# seqid renamed to match reference.fasta and primer.bed so `ivar variants -g` annotates AA changes.
+##sequence-region hChikV_Angola_NIID_NIID54_2016 1 11237
+##species https://www.ncbi.nlm.nih.gov/Taxonomy/Browser/wwwtax.cgi?id=37124
+hChikV_Angola_NIID_NIID54_2016	DDBJ	region	1	11237	.	+	.	ID=hChikV_Angola_NIID_NIID54_2016:1..11237;Dbxref=taxon:37124;collection-date=2016-05-11;country=Angola;gbkey=Src;isolate=CHIKV/Hu/Angola/NIID54/2016;isolation-source=Blood;mol_type=genomic RNA;nat-host=Homo sapiens
+hChikV_Angola_NIID_NIID54_2016	DDBJ	CDS	1	7425	.	+	0	ID=cds-BBC18141.1;Dbxref=NCBI_GP:BBC18141.1;Name=BBC18141.1;Note=contains NSP1%2C NSP2%2C NSP3%2C NSP4;gbkey=CDS;product=nonstructural polyprotein;protein_id=BBC18141.1;transl_except=(pos:5569..5571%2Caa:Other)
+hChikV_Angola_NIID_NIID54_2016	DDBJ	CDS	7491	11237	.	+	0	ID=cds-BBC18142.1;Dbxref=NCBI_GP:BBC18142.1;Name=BBC18142.1;Note=contains C%2C E3%2C E2%2C 6K%2C E1;gbkey=CDS;product=structural polyprotein;protein_id=BBC18142.1

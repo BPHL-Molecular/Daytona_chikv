@@ -4,23 +4,29 @@ All notable changes to the Daytona Chikungunya pipeline will be documented in th
 
 ---
 
-## [1.0.0] - initial release
+## [Unreleased]
 
-Initial Chikungunya virus (CHIKV) pipeline, adapted from the `Daytona` (SARS-CoV-2)
-pipeline.
+Pre-1.0 development - initial Chikungunya virus (CHIKV) pipeline, adapted from the
+`Daytona` (SARS-CoV-2) pipeline and in active testing before the first tagged release.
 
 ### Added
 
 - `daytona_chikv.nf`: entry workflow; `meta`-driven, staged-file channel design
 - `nextflow.config`: single config; per-tool `withName` `container`/`cpus`/`memory`;
-  profiles for `standard`, `docker`, `singularity`, `apptainer`
+  tool groups with identical settings share a regex selector (`fastqc.*`, `bbtools.*`,
+  `samtools.*`, `ivar.*`); profiles for `standard`, `docker`, `singularity`, `apptainer`
 - `modules/`: one `.nf` per tool: `fastqc`, `humanscrubber`, `trimmomatic`, `bbtools`,
-  `multiqc`, `kraken2`, `bwa`, `samtools` (`samtools_bam`/`samtools_coverage`/`samtools_mpileup`),
+  `kraken2`, `bwa`, `samtools` (`samtools_bam`/`samtools_coverage`/`samtools_mpileup`),
   `ivar` (`ivar_trim`/`ivar_variants`/`ivar_consensus`), `qc_gate`,
-  `nextclade` (`nextclade_download`/`nextclade`), `summary_report`
+  `nextclade` (`nextclade_download`/`nextclade`), `summary_report`, `multiqc`
+- `modules/multiqc.nf`: aggregate MultiQC (`output/all_multiqc/`) plus a per-sample
+  `multiqc_sample` process over each sample's raw + clean FastQC
+  (`output/<sample_id>/multiqc/`); the aggregate runs with
+  `--ignore "*/multiqc/*" --ignore "*/all_multiqc/*"` so it gathers raw tool outputs
+  without re-ingesting any MultiQC report/data dirs
 - `modules/nextclade.nf`: Nextclade **v3** with
-  `nextclade dataset get --name community/v-gen-lab/chikV/genotypes` (CHIKV genotype
-  assignment: ECSA / Asian / West African) and `storeDir` caching
+  `nextclade dataset get --name community/v-gen-lab/chikV/genotypes` (CHIKV genotype:
+  ECSA / Asian / West African) and `storeDir` caching
 - `bin/qc_gate.py`: QC gate (≥80% genome, ≥100x depth); 2-column TSV
 - `bin/summary_report.py`: aggregates per-sample stats into `summary_report.txt`;
   Kraken2 CHIKV percentage and Nextclade genotype/version

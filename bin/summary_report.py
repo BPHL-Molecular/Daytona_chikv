@@ -16,8 +16,8 @@ Output columns:
     sample_id,
     reference, start, end,
     num_raw_reads, num_clean_reads, num_mapped_reads, percent_mapped_clean_reads,
-    cov_bases_mapped, percent_genome_cov_map, mean_depth, mean_base_qual, mean_map_qual,
-    assembly_length, numN, percent_ref_genome_cov,
+    cov_bases_mapped, percent_genome_cov_aligned, mean_depth, mean_base_qual, mean_map_qual,
+    assembly_length, numN, percent_genome_cov_assembled,
     qc_flag, kraken2_percent, nextclade_clade, nextclade_version
 """
 
@@ -28,12 +28,7 @@ import os
 import sys
 
 
-# ---------------------------------------------------------------------------
-# Loaders: each returns a dict keyed by sample_id (unless noted)
-# ---------------------------------------------------------------------------
-
 def load_coverage(coverage_dir):
-    """Read *.coverage.txt (samtools coverage, post-ivar). {sample_id: stats}."""
     records = {}
     for path in glob.glob(os.path.join(coverage_dir, "*.coverage.txt")):
         sid = os.path.basename(path).replace(".coverage.txt", "")
@@ -46,21 +41,20 @@ def load_coverage(coverage_dir):
         if len(cols) < 9:
             continue
         records[sid] = {
-            "reference":              cols[0],
-            "start":                  cols[1],
-            "end":                    cols[2],
-            "num_mapped_reads":       cols[3],
-            "cov_bases_mapped":       cols[4],
-            "percent_genome_cov_map": cols[5],
-            "mean_depth":             cols[6],
-            "mean_base_qual":         cols[7],
-            "mean_map_qual":          cols[8],
+            "reference":                  cols[0],
+            "start":                      cols[1],
+            "end":                        cols[2],
+            "num_mapped_reads":           cols[3],
+            "cov_bases_mapped":           cols[4],
+            "percent_genome_cov_aligned": cols[5],
+            "mean_depth":                 cols[6],
+            "mean_base_qual":             cols[7],
+            "mean_map_qual":              cols[8],
         }
     return records
 
 
 def load_consensus(consensus_dir):
-    """Read *.consensus.fa → {sample_id: {assembly_length, numN, _seq_called}}."""
     records = {}
     for path in glob.glob(os.path.join(consensus_dir, "*.consensus.fa")):
         sid = os.path.basename(path).replace(".consensus.fa", "")
@@ -79,7 +73,6 @@ def load_consensus(consensus_dir):
 
 
 def load_nextclade(nextclade_dir):
-    """Read *_nextclade.tsv → {seqName: row}."""
     records = {}
     for path in glob.glob(os.path.join(nextclade_dir, "*_nextclade.tsv")):
         with open(path, newline="") as fh:
@@ -92,10 +85,6 @@ def load_nextclade(nextclade_dir):
 
 
 def load_kraken2(kraken2_dir):
-    """
-    Parse *_kraken2_report.txt; report the percentage of reads at the most
-    specific available Chikungunya virus taxon. {sample_id: '42.35'}.
-    """
     KW_PRIORITY = (
         "chikungunya virus",
         "alphavirus chikungunya",
@@ -129,7 +118,6 @@ def load_kraken2(kraken2_dir):
 
 
 def load_trimstats(trimstat_dir):
-    """Parse *_trimstats.txt (trimmomatic). 'Input Read Pairs: N' → N*2."""
     import re
     records = {}
     for path in glob.glob(os.path.join(trimstat_dir, "*_trimstats.txt")):
@@ -146,7 +134,6 @@ def load_trimstats(trimstat_dir):
 
 
 def load_phix_log(phix_log_dir):
-    """Parse *_phix_log.txt (bbduk). 'Result:  N reads' → clean read count."""
     import re
     records = {}
     for path in glob.glob(os.path.join(phix_log_dir, "*_phix_log.txt")):
@@ -163,7 +150,6 @@ def load_phix_log(phix_log_dir):
 
 
 def load_qc(qc_dir):
-    """Read *_qc.tsv → {sample_id: qc_flag}."""
     records = {}
     for path in glob.glob(os.path.join(qc_dir, "*_qc.tsv")):
         with open(path, newline="") as fh:
@@ -175,10 +161,7 @@ def load_qc(qc_dir):
     return records
 
 
-# ---------------------------------------------------------------------------
 # Main
-# ---------------------------------------------------------------------------
-
 def main():
     parser = argparse.ArgumentParser(description="Aggregate Chikungunya virus pipeline results into summary TXT")
     parser.add_argument("--qc-dir",        required=True)
@@ -217,8 +200,8 @@ def main():
         "sample_id",
         "reference", "start", "end",
         "num_raw_reads", "num_clean_reads", "num_mapped_reads", "percent_mapped_clean_reads",
-        "cov_bases_mapped", "percent_genome_cov_map", "mean_depth", "mean_base_qual", "mean_map_qual",
-        "assembly_length", "numN", "percent_ref_genome_cov",
+        "cov_bases_mapped", "percent_genome_cov_aligned", "mean_depth", "mean_base_qual", "mean_map_qual",
+        "assembly_length", "numN", "percent_genome_cov_assembled",
         "qc_flag",
         "kraken2_percent", "nextclade_clade", "nextclade_version",
     ]
@@ -226,8 +209,8 @@ def main():
     if not all_samples:
         with open(args.output, "w", newline="") as out:
             csv.writer(out, delimiter="\t").writerow(header)
-        print("WARNING: no samples found, wrote header-only report", file=sys.stderr)
-        return
+        print("ERROR: no samples found, wrote header-only report", file=sys.stderr)
+        sys.exit(1)
 
     rows = []
     for sid in all_samples:
@@ -256,26 +239,26 @@ def main():
         clade = nc.get("clade") or nc.get("clade_nextstrain") or ("NA" if not nc else "unassigned")
 
         rows.append({
-            "sample_id":                  sid,
-            "reference":                  cov.get("reference", "NA"),
-            "start":                      cov.get("start", "NA"),
-            "end":                        cov.get("end", "NA"),
-            "num_raw_reads":              raw_reads,
-            "num_clean_reads":            clean_reads,
-            "num_mapped_reads":           mapped,
-            "percent_mapped_clean_reads": pct_mapped,
-            "cov_bases_mapped":           cov.get("cov_bases_mapped", "NA"),
-            "percent_genome_cov_map":     cov.get("percent_genome_cov_map", "NA"),
-            "mean_depth":                 cov.get("mean_depth", "NA"),
-            "mean_base_qual":             cov.get("mean_base_qual", "NA"),
-            "mean_map_qual":              cov.get("mean_map_qual", "NA"),
-            "assembly_length":            con.get("assembly_length", "NA"),
-            "numN":                       con.get("numN", "NA"),
-            "percent_ref_genome_cov":     pct_ref,
-            "qc_flag":                    qf,
-            "kraken2_percent":            k2,
-            "nextclade_clade":            clade,
-            "nextclade_version":          nextclade_version,
+            "sample_id":                    sid,
+            "reference":                    cov.get("reference", "NA"),
+            "start":                        cov.get("start", "NA"),
+            "end":                          cov.get("end", "NA"),
+            "num_raw_reads":                raw_reads,
+            "num_clean_reads":              clean_reads,
+            "num_mapped_reads":             mapped,
+            "percent_mapped_clean_reads":   pct_mapped,
+            "cov_bases_mapped":             cov.get("cov_bases_mapped", "NA"),
+            "percent_genome_cov_aligned":   cov.get("percent_genome_cov_aligned", "NA"),
+            "mean_depth":                   cov.get("mean_depth", "NA"),
+            "mean_base_qual":               cov.get("mean_base_qual", "NA"),
+            "mean_map_qual":                cov.get("mean_map_qual", "NA"),
+            "assembly_length":              con.get("assembly_length", "NA"),
+            "numN":                         con.get("numN", "NA"),
+            "percent_genome_cov_assembled": pct_ref,
+            "qc_flag":                      qf,
+            "kraken2_percent":              k2,
+            "nextclade_clade":              clade,
+            "nextclade_version":            nextclade_version,
         })
 
     with open(args.output, "w", newline="") as out:
@@ -284,6 +267,93 @@ def main():
         writer.writerows(rows)
 
     print(f"Summary report written: {args.output} ({len(rows)} samples)", file=sys.stderr)
+
+    emit_daytona_mqc_tables(rows)
+
+    expected = sorted(set(trimstats) | set(phix_log))
+
+    def _stage_check(label, produced_ids, expected_ids):
+        if expected_ids and not any(sid in produced_ids for sid in expected_ids):
+            print(f"ERROR: {label} produced zero successful outputs across "
+                  f"{len(expected_ids)} sample(s) that should have reached it. "
+                  f"This looks like a systemic failure (bad container, missing "
+                  f"reference, wrong mount), not per-sample QC/coverage variation.",
+                  file=sys.stderr)
+            return True
+        return False
+
+    systemic_failure = False
+    systemic_failure |= _stage_check('samtools_coverage (post-ivar mapping)', coverage, expected)
+    systemic_failure |= _stage_check('ivar_consensus', consensus, expected)
+    systemic_failure |= _stage_check('qc_gate', qc, expected)
+    systemic_failure |= _stage_check('nextclade', nextclade, expected)
+
+    if systemic_failure:
+        sys.exit(1)
+
+
+def _mqc_preamble(section_id, section_name, description, pconfig=None, headers=None):
+    lines = [
+        f"# id: '{section_id}'",
+        f"# section_name: '{section_name}'",
+        f"# description: '{description}'",
+        "# plot_type: 'table'",
+    ]
+    if pconfig:
+        lines.append("# pconfig:")
+        for k, v in pconfig.items():
+            val = str(v).lower() if isinstance(v, bool) else f"'{v}'"
+            lines.append(f"#     {k}: {val}")
+    if headers:
+        lines.append("# headers:")
+        for col, opts in headers.items():
+            lines.append(f"#     {col}:")
+            for k, v in opts.items():
+                val = str(v).lower() if isinstance(v, bool) else f"'{v}'"
+                lines.append(f"#         {k}: {val}")
+    return lines
+
+
+def _write_mqc(path, preamble_lines, header, rows):
+    with open(path, 'w') as fh:
+        for pl in preamble_lines:
+            fh.write(pl + '\n')
+        fh.write('\t'.join(header) + '\n')
+        for row in sorted(rows, key=lambda r: r['sample_id']):
+            fh.write('\t'.join(str(row.get(h, 'NA')) for h in header) + '\n')
+    print(f"summary_report.py: wrote {path} ({len(rows)} sample(s))", file=sys.stderr)
+
+
+DAYTONA_GENOTYPE_HEADER = ['sample_id', 'nextclade_clade', 'mean_depth',
+                           'percent_genome_cov_assembled', 'qc_flag']
+DAYTONA_ASSEMBLY_HEADER = ['sample_id', 'assembly_length', 'numN',
+                           'percent_genome_cov_assembled']
+
+
+def emit_daytona_mqc_tables(rows):
+    if not rows:
+        return
+    _write_mqc(
+        'daytona_chikv_genotype_mqc.tsv',
+        _mqc_preamble(
+            'daytona_chikv_genotype', 'Genotype and Coverage QC',
+            'Nextclade CHIKV genotype assignment and the coverage-based QC verdict.',
+            pconfig={'id': 'daytona_chikv_genotype_table', 'col1_header': 'Sample',
+                     'no_violin': True},
+        ),
+        DAYTONA_GENOTYPE_HEADER, rows,
+    )
+    _write_mqc(
+        'daytona_chikv_assembly_mqc.tsv',
+        _mqc_preamble(
+            'daytona_chikv_assembly', 'Assembly QC',
+            'Consensus assembly length, ambiguous base count and completeness '
+            'against the reference.',
+            pconfig={'id': 'daytona_chikv_assembly_table', 'col1_header': 'Sample',
+                     'no_violin': True},
+        ),
+        DAYTONA_ASSEMBLY_HEADER, rows,
+    )
 
 
 if __name__ == "__main__":

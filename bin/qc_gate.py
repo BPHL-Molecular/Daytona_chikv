@@ -6,10 +6,14 @@ Reads samtools coverage output and the consensus FASTA.
 Writes a 2-column TSV: sample_id, qc_flag.
 
 QC thresholds (genome breadth checked first, then depth):
-    percent_ref_genome_cov >= 80%  AND  mean_depth >= 100x  -> PASS
+    percent_genome_cov_assembled >= 80%  AND  mean_depth >= 100x  -> PASS
+
+On PASS, the consensus is also copied to <sample_id>.consensus.fasta for
+collection into the run's assemblies_qc_pass/ directory.
 """
 
 import argparse
+import shutil
 import sys
 
 QC_MIN_COVERAGE = 80.0
@@ -60,6 +64,9 @@ def main():
     with open(args.output, 'w') as fh:
         fh.write('sample_id\tqc_flag\n')
         fh.write(f"{args.sample_id}\t{flag}\n")
+
+    if flag == 'PASS':
+        shutil.copyfile(args.consensus, f"{args.sample_id}.consensus.fasta")
 
     print(f"QC for {args.sample_id}: {flag}", file=sys.stderr)
 

@@ -56,6 +56,7 @@ workflow {
         def meta     = [ id: clean_id, single_end: false ]
         [ meta, files ]
     }
+    .ifEmpty { error "No paired FASTQ files found in ${params.input}. Expected filenames matching *_{1,2}.fastq.gz or *_R{1,2}_*.fastq.gz." }
 
     // CHIKV reference (FASTA + bwa index), annotation, and primer assets
     ch_ref    = channel.value(refFiles())
@@ -111,6 +112,7 @@ workflow {
         .map { _meta -> 1 }
         .collect()
         .map { _ids -> true }
+        .ifEmpty(true)
 
     summary_report(
         ch_barrier,
@@ -124,5 +126,11 @@ workflow {
         ch_nextclade.version
     )
 
-    multiqc(summary_report.out.report)
+    multiqc(
+        summary_report.out.report,
+        channel.value(file("${projectDir}/assets/multiqc_config.yaml",      checkIfExists: true)),
+        channel.value(file("${projectDir}/assets/daytona_chikv_report.css", checkIfExists: true)),
+        channel.value(file("${projectDir}/nextflow.config",                 checkIfExists: true)),
+        summary_report.out.mqc_tables.ifEmpty([])
+    )
 }

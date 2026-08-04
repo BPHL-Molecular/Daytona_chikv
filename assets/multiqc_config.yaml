@@ -81,11 +81,14 @@ table_columns_placement:
     median_sequence_length: 210
     percent_gc: 220
 
+# MultiQC's own default for median_sequence_length flips between the two runs, so pin it
 table_columns_visible:
   "FastQC (raw reads)":
     percent_duplicates: false
+    median_sequence_length: true
   "FastQC (clean reads)":
     percent_duplicates: false
+    median_sequence_length: true
 
 table_cond_formatting_rules:
   qc_flag:

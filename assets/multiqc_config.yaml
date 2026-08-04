@@ -98,6 +98,10 @@ table_cond_formatting_rules:
       - s_contains: "FAIL"
 
   nextclade_clade:
+    pass:
+      - s_eq: "I-WestAfrica"
+      - s_eq: "II-ECSA"
+      - s_eq: "III-Asian"
     warn:
       - s_eq: "unassigned"
       - s_eq: "NA"

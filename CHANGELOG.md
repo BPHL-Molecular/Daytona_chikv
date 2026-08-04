@@ -49,8 +49,10 @@ Pre-1.0 development - initial Chikungunya virus (CHIKV) pipeline, adapted from t
 - `README.md`, `CHANGELOG.md`, `LICENSE`
 - `assets/multiqc_config.yaml` and `assets/daytona_chikv_report.css`: dashboard definition;
   branding, section order, column visibility and placement, and pass/fail cell coloring
-- `modules/fastqc.nf`: the `fastqc` process names its outputs `<sample>_R{1,2}_raw_fastqc.*`,
-  so raw and clean reads collapse onto one General Statistics row per sample instead of two
+- `modules/fastqc.nf`: the `fastqc` process symlinks its inputs to `<sample>_R{1,2}_raw.fastq.gz`
+  before running, so raw and clean reads collapse onto one General Statistics row per sample
+  instead of two. MultiQC keys FastQC rows off the `Filename` recorded inside `fastqc_data.txt`,
+  which follows the input name, so renaming the output zip has no effect
 - `.gitattributes` to enforce LF line endings
 
 ### Changed

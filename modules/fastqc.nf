@@ -11,17 +11,13 @@ process fastqc {
     script:
     def prefix = meta.id
     """
+    # MultiQC keys FastQC rows off the Filename inside fastqc_data.txt, so the input must carry the canonical name
+    ln -s ${reads[0]} ${prefix}_R1_raw.fastq.gz
+    ln -s ${reads[1]} ${prefix}_R2_raw.fastq.gz
+
     fastqc \\
         --threads ${task.cpus} \\
-        ${reads[0]} ${reads[1]}
-
-    r1base=\$(basename ${reads[0]} .fastq.gz)
-    r2base=\$(basename ${reads[1]} .fastq.gz)
-
-    mv \${r1base}_fastqc.html ${prefix}_R1_raw_fastqc.html
-    mv \${r1base}_fastqc.zip  ${prefix}_R1_raw_fastqc.zip
-    mv \${r2base}_fastqc.html ${prefix}_R2_raw_fastqc.html
-    mv \${r2base}_fastqc.zip  ${prefix}_R2_raw_fastqc.zip
+        ${prefix}_R1_raw.fastq.gz ${prefix}_R2_raw.fastq.gz
     """
 }
 
